@@ -291,7 +291,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="credits">
     <div class="thanks">Gracias por usar Inventario Scanner 🙌</div>
     <div class="author">Creado por Patricio Navarro Reyes</div>
-    <div class="version">v12 · 2026</div>
+    <div class="version">v1.0 · 2026</div>
   </div>
 </div>
 <div class="bottom-bar"><button class="finish-btn" id="finishBtn" onclick="openSendModal()" disabled><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>FINALIZAR CONTEO</button></div>
@@ -404,17 +404,16 @@ function toggleTorch(){if(!currentTrack)return;torchOn=!torchOn;currentTrack.app
 let detector=null;
 if('BarcodeDetector' in window)detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a']});
 function scanLoop(){if(!cameraActive)return;const v=document.getElementById('video');if(v.readyState===v.HAVE_ENOUGH_DATA&&detector&&!scanCooldown){detector.detect(v).then(b=>{if(b.length>0){const code=b[0].rawValue;if(code&&code.trim()){scanCooldown=true;onBarcodeScan(code.trim());setTimeout(()=>{scanCooldown=false},2000)}}}).catch(()=>{})}requestAnimationFrame(scanLoop)}
-function validarEAN(code){code=code.replace(/\s/g,'');if(!/^\d+$/.test(code))return false;const d=code.split('').map(Number);if(d.length!==13&&d.length!==8&&d.length!==12)return false;const check=d.pop();let sum=0;if(d.length===12){for(let i=0;i<d.length;i++){sum+=d[i]*(i%2===0?1:3)}}else{for(let i=0;i<d.length;i++){sum+=d[i]*(i%2===0?3:1)}}return check===(10-(sum%10))%10}
-function onBarcodeScan(code){if(!validarEAN(code)){showToast(`❌ Lectura errónea: ${code}`,'error');return}playBeep();flash();if(navigator.vibrate)navigator.vibrate(80);totalScans++;const existing=items.filter(i=>i.code===code);if(existing.length>0){const totalQty=existing.reduce((s,i)=>s+i.qty,0);showToast(`⚠️ ${code} ya contado (${totalQty} unid.) - Ingrese nueva cantidad`,'error')}openQtyModal(code)}
+function onBarcodeScan(code){playBeep();flash();if(navigator.vibrate)navigator.vibrate(80);totalScans++;const existing=items.filter(i=>i.code===code);if(existing.length>0){const totalQty=existing.reduce((s,i)=>s+i.qty,0);showToast(`⚠️ ${code} ya contado (${totalQty} unid.)`,'error')}openQtyModal(code)}
 
 // ═══ QTY MODAL ═══
-function openQtyModal(code){pendingCode=code;document.getElementById('qtyCode').textContent=code;const existing=items.filter(i=>i.code===code);const totalQty=existing.reduce((s,i)=>s+i.qty,0);document.getElementById('qtyExisting').textContent=totalQty>0?`⚠️ Ya contado: ${totalQty} unidades (se agregará línea nueva)`:'';const inp=document.getElementById('qtyInput');inp.value=1;document.getElementById('qtyModalBg').classList.add('show');setTimeout(()=>{inp.focus();inp.select()},150)}
+function openQtyModal(code){pendingCode=code;document.getElementById('qtyCode').textContent=code;const existing=items.filter(i=>i.code===code);const totalQty=existing.reduce((s,i)=>s+i.qty,0);document.getElementById('qtyExisting').textContent=totalQty>0?`⚠️ Ya contado: ${totalQty} unid. (se agregará línea nueva)`:'';const inp=document.getElementById('qtyInput');inp.value=1;document.getElementById('qtyModalBg').classList.add('show');setTimeout(()=>{inp.focus();inp.select()},150)}
 function qtyAdjust(d){const i=document.getElementById('qtyInput');i.value=Math.max(1,(parseInt(i.value)||1)+d)}
 function confirmQty(){if(!pendingCode)return;const qty=parseInt(document.getElementById('qtyInput').value)||1;items.push({code:pendingCode,qty:qty});showToast(`✓ ${pendingCode} × ${qty}`,'success');pendingCode=null;document.getElementById('qtyModalBg').classList.remove('show');render()}
 function cancelQty(){pendingCode=null;totalScans=Math.max(0,totalScans-1);document.getElementById('qtyModalBg').classList.remove('show')}
 
 // ═══ MANUAL ═══
-function addManual(){const i=document.getElementById('manualInput'),code=i.value.trim();if(!code){showToast('Ingresa un código','error');return}if(!validarEAN(code)){showToast(`❌ Código inválido: ${code}`,'error');return}playBeep();flash();totalScans++;i.value='';const existing=items.filter(x=>x.code===code);if(existing.length>0){const totalQty=existing.reduce((s,x)=>s+x.qty,0);showToast(`⚠️ ${code} ya contado (${totalQty} unid.) - Ingrese nueva cantidad`,'error')}openQtyModal(code)}
+function addManual(){const i=document.getElementById('manualInput'),code=i.value.trim();if(!code){showToast('Ingresa un código','error');return}playBeep();flash();totalScans++;i.value='';const existing=items.filter(x=>x.code===code);if(existing.length>0){const totalQty=existing.reduce((s,x)=>s+x.qty,0);showToast(`⚠️ ${code} ya contado (${totalQty} unid.)`,'error')}openQtyModal(code)}
 
 // ═══ LIST ═══
 function changeQty(idx,d){if(!items[idx])return;items[idx].qty+=d;if(items[idx].qty<=0){items.splice(idx,1);showToast('Eliminado','error')}render()}
@@ -443,7 +442,7 @@ async function sendWithAttachment(){
     try{await navigator.share({title:`Inventario ${config.type} - ${config.zone} ${config.areaCode}`,text:`Conteo: ${config.type} - ${config.zone} (${config.areaCode})\nFecha: ${config.date}\nContador: ${config.userName}\nEnviar a: ${email}`,files:[file]});closeSendModal();showSuccess();return}catch(e){if(e.name==='AbortError')return}
   }
   downloadFile();
-  setTimeout(()=>{const s=encodeURIComponent(`Inventario ${config.type} - ${config.zone} (${config.areaCode}) - ${config.date}`);const b=encodeURIComponent(`Adjunto archivo TXT.\n\nTipo: ${config.type}\nZona: ${config.zone} - Area ${config.areaCode}\nFecha: ${config.date}\nContador: ${config.userName}\nLíneas: ${lastSendSummary.lines}\nCódigos únicos: ${lastSendSummary.codes}\nUnidades: ${lastSendSummary.units}\n\n(El archivo se descargó, adjúntalo)`);window.location.href=`mailto:${email}?subject=${s}&body=${b}`;closeSendModal();setTimeout(showSuccess,1000)},500);
+  setTimeout(()=>{const s=encodeURIComponent(`Inventario ${config.type} - ${config.zone} (${config.areaCode}) - ${config.date}`);const b=encodeURIComponent(`Adjunto archivo TXT.\n\nTipo: ${config.type}\nZona: ${config.zone} - Area ${config.areaCode}\nFecha: ${config.date}\nContador: ${config.userName}\nCódigos: ${lastSendSummary.codes}\nLíneas: ${lastSendSummary.lines}\nUnidades: ${lastSendSummary.units}\n\n(El archivo se descargó, adjúntalo)`);window.location.href=`mailto:${email}?subject=${s}&body=${b}`;closeSendModal();setTimeout(showSuccess,1000)},500);
 }
 
 // ═══ SUCCESS ═══
