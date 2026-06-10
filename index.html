@@ -291,7 +291,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="credits">
     <div class="thanks">Gracias por usar Inventario Scanner 🙌</div>
     <div class="author">Creado por Patricio Navarro Reyes</div>
-    <div class="version">v11 · 2026</div>
+    <div class="version">v12 · 2026</div>
   </div>
 </div>
 <div class="bottom-bar"><button class="finish-btn" id="finishBtn" onclick="openSendModal()" disabled><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>FINALIZAR CONTEO</button></div>
@@ -404,7 +404,7 @@ function toggleTorch(){if(!currentTrack)return;torchOn=!torchOn;currentTrack.app
 let detector=null;
 if('BarcodeDetector' in window)detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a']});
 function scanLoop(){if(!cameraActive)return;const v=document.getElementById('video');if(v.readyState===v.HAVE_ENOUGH_DATA&&detector&&!scanCooldown){detector.detect(v).then(b=>{if(b.length>0){const code=b[0].rawValue;if(code&&code.trim()){scanCooldown=true;onBarcodeScan(code.trim());setTimeout(()=>{scanCooldown=false},2000)}}}).catch(()=>{})}requestAnimationFrame(scanLoop)}
-function validarEAN(code){const d=code.split('').map(Number);if(d.some(isNaN))return false;if(d.length!==13&&d.length!==8&&d.length!==12)return false;const check=d.pop();let sum=0;for(let i=0;i<d.length;i++){sum+=d[i]*(i%2===0?1:3)}return check===(10-(sum%10))%10}
+function validarEAN(code){code=code.replace(/\s/g,'');if(!/^\d+$/.test(code))return false;const d=code.split('').map(Number);if(d.length!==13&&d.length!==8&&d.length!==12)return false;const check=d.pop();let sum=0;if(d.length===12){for(let i=0;i<d.length;i++){sum+=d[i]*(i%2===0?1:3)}}else{for(let i=0;i<d.length;i++){sum+=d[i]*(i%2===0?3:1)}}return check===(10-(sum%10))%10}
 function onBarcodeScan(code){if(!validarEAN(code)){showToast(`❌ Lectura errónea: ${code}`,'error');return}playBeep();flash();if(navigator.vibrate)navigator.vibrate(80);totalScans++;const existing=items.filter(i=>i.code===code);if(existing.length>0){const totalQty=existing.reduce((s,i)=>s+i.qty,0);showToast(`⚠️ ${code} ya contado (${totalQty} unid.) - Ingrese nueva cantidad`,'error')}openQtyModal(code)}
 
 // ═══ QTY MODAL ═══
